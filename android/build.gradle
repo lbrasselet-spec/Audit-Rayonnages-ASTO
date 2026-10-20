@@ -1,0 +1,50 @@
+// Audit Rayonnages ASTO — module de l'application (copié en app/build.gradle par .github/workflows/apk.yml)
+plugins {
+    id 'com.android.application' version '8.5.2'
+}
+
+android {
+    namespace 'fr.brasselet.audit'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'fr.brasselet.audit'
+        minSdk 26
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv('VERSION_CODE') ?: '1')
+        versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '0')
+    }
+
+    // Clé de signature fixe : les nouvelles versions s'installent par-dessus l'ancienne
+    // sans perdre les audits enregistrés sur le téléphone. La clé n'est jamais dans le dépôt :
+    // GitHub la fournit au moment de la compilation (secret AUDIT_KEYSTORE_B64, voir apk.yml).
+    signingConfigs {
+        audit {
+            storeFile file('audit.p12')
+            storePassword System.getenv('AUDIT_KEY_PASSWORD')
+            keyAlias 'audit'
+            keyPassword System.getenv('AUDIT_KEY_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.audit
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'   // FileProvider (photos)
+}
