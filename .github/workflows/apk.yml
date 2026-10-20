@@ -126,9 +126,12 @@ jobs:
           P=fr.brasselet.audit
           adb install -r -g Audit-Rayonnages-ASTO.apk || echo "::error::Installation impossible"
           adb logcat -c
-          adb shell am start -n $P/.MainActivity
+          adb shell input keyevent 82
+          adb shell am start -W -n $P/.MainActivity > start.txt 2>&1
           sleep 25
           adb logcat -d > logcat.txt
+          adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" > top.txt
+          adb exec-out screencap -p > ecran.png
           adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 && adb shell cat /sdcard/ui.xml > ui.xml
           enc() { sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}'; }
           if grep -q "FATAL EXCEPTION" logcat.txt; then
@@ -136,6 +139,8 @@ jobs:
           fi
           grep -i "chromium.*Uncaught\|chromium.*Error" logcat.txt | head -20 > js.txt
           [ -s js.txt ] && echo "::warning title=Erreurs de la page::$(enc < js.txt)"
+          echo "::notice title=Démarrage::$(cat start.txt top.txt | enc)"
+          echo "::notice title=Journal::$(grep -E "fr.brasselet.audit|AndroidRuntime|chromium|ActivityTaskManager: (START|Displayed)" logcat.txt | tail -40 | enc)"
           echo "::notice title=Écran::$(grep -o 'text="[^"]*"' ui.xml | sed 's/text="//;s/"$//' | grep -v '^$' | head -40 | enc)"
           FIN
 
@@ -146,3 +151,9 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: bash "$RUNNER_TEMP/essai.sh"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ecran-test
+          path: ecran.png
